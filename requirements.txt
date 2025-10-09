@@ -9,3 +9,4 @@ matplotlib>=3.7.0
 pandas
 datasets
 scikit-learn
+dotenv
