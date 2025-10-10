@@ -10,3 +10,4 @@ pandas
 datasets
 scikit-learn
 dotenv
+rapidfuzz
