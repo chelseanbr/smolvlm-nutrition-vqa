@@ -110,9 +110,7 @@ class VQADatasetForTraining(Dataset):
 def train(
     data_dir: Path | None = None,
     train_dataset_name: str = "train",
-    # output_dir: str = "vlm_sft",
-    # output_dir: str = "homework/vlm_model",
-    output_dir: str = "src/vlm_model",
+    output_dir: str = "vlm_sft",
     num_train_epochs: int = 0.05,  # use only 0.05 epoch for training
     per_device_train_batch_size: int = 8,
     gradient_accumulation_steps: int = 4,
@@ -246,9 +244,7 @@ def evaluate(model: nn.Module, val_loader: DataLoader) -> float:
 def demo_train():
     train(
         train_dataset_name="train_demo",
-        # output_dir="demo_train",
-        # output_dir="homework/demo_train",
-        output_dir="src/demo_train",
+        output_dir="demo_train",
         num_train_epochs=1,
         per_device_train_batch_size=1,
         num_workers=1,
