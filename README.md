@@ -8,3 +8,34 @@ conda activate csml-proj
 
 pip install -r requirements.txt
 ```
+
+## Finetuning
+### Demo Data
+
+Train:
+```bash
+python -m src.finetune demo_train
+```
+
+Benchmark:
+```bash
+python -m src.finetune val demo_train/checkpoint-path
+```
+
+### Full Data
+
+Train:
+```bash
+python -m src.finetune train
+```
+
+Benchmark:
+```bash
+python -m src.finetune val vlm_model/checkpoint-path
+```
+
+Final Test:
+Benchmark:
+```bash
+python -m src.finetune test vlm_model/checkpoint-path
+```

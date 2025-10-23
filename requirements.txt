@@ -11,3 +11,4 @@ datasets
 scikit-learn
 dotenv
 rapidfuzz
+tensorboard

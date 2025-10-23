@@ -257,8 +257,17 @@ def demo_train():
     )
 
 
-def test_model(ckpt_path: str, val_dataset: str = "valid_grader"):
-    testset = VQADataset(val_dataset)
+def val_model(ckpt_path: str, val_dataset: str = "valid_grader"):
+    valset = VQADataset(val_dataset)
+
+    llm = load(ckpt_path)
+
+    benchmark_result = benchmark(llm, valset, 128)
+    print(benchmark_result.accuracy)
+
+
+def test_model(ckpt_path: str, test_dataset: str = "test_grader"):
+    testset = VQADataset(test_dataset)
 
     llm = load(ckpt_path)
 
@@ -269,4 +278,4 @@ def test_model(ckpt_path: str, val_dataset: str = "valid_grader"):
 if __name__ == "__main__":
     from fire import Fire
 
-    Fire({"demo_train": demo_train, "train": train, "test": test_model})
+    Fire({"demo_train": demo_train, "train": train, "val": val_model, "test": test_model})
