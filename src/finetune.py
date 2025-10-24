@@ -12,18 +12,19 @@ from .base_vlm import BaseVLM
 from .data import VQADataset, benchmark
 
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+# DEFAULT_MODEL = "HuggingFaceTB/SmolVLM-256M-Instruct"
 
-processor = AutoProcessor.from_pretrained("HuggingFaceTB/SmolVLM-256M-Instruct")
+# processor = AutoProcessor.from_pretrained(DEFAULT_MODEL)
 
 
-def load(model_name: str = "vlm_model") -> BaseVLM:
+def load(model_name: str = "vlm_model", ckpt_name: str) -> BaseVLM:
     from pathlib import Path
 
     from peft import PeftModel
 
     model_path = Path(__file__).parent / model_name
 
-    vlm = BaseVLM()
+    vlm = BaseVLM(checkpoint=ckpt_name)
     vlm.model = PeftModel.from_pretrained(vlm.model, model_path).to(vlm.device)
     vlm.model.eval()
 
@@ -108,6 +109,7 @@ class VQADatasetForTraining(Dataset):
 
 
 def train(
+    ckpt_name: str,
     data_dir: Path | None = None,
     train_dataset_name: str = "train-grader",
     # output_dir: str = "vlm_sft",
@@ -137,9 +139,15 @@ def train(
         lora_alpha: LoRA alpha
         lora_dropout: LoRA dropout
     """
-    vlm = BaseVLM()
+    print(f'{ckpt_name=}')
+    global processor
+    processor = AutoProcessor.from_pretrained(ckpt_name)
+
+    vlm = BaseVLM(checkpoint=ckpt_name)
 
     # Create output directory
+    out_name = ckpt_name.split('/')[-1]
+    output_dir = f'{output_dir}/{out_name}'
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -243,8 +251,9 @@ def evaluate(model: nn.Module, val_loader: DataLoader) -> float:
     return val_loss / len(val_loader)
 
 
-def demo_train():
+def demo_train(ckpt_name: str):
     train(
+        ckpt_name=ckpt_name
         train_dataset_name="train_demo",
         # output_dir="demo_train",
         # output_dir="homework/demo_train",
@@ -257,19 +266,27 @@ def demo_train():
     )
 
 
-def val_model(ckpt_path: str, val_dataset: str = "val-grader"):
+def val_model(ckpt_path: str, ckpt_name: str, val_dataset: str = "val-grader"):
+    print(f'{ckpt_name=}')
+    global processor
+    processor = AutoProcessor.from_pretrained(ckpt_name)
+
     valset = VQADataset(val_dataset)
 
-    llm = load(ckpt_path)
+    llm = load(ckpt_path, ckpt_name)
 
     benchmark_result = benchmark(llm, valset, 128)
     print(benchmark_result.accuracy)
 
 
-def test_model(ckpt_path: str, test_dataset: str = "test-grader"):
+def test_model(ckpt_path: str, ckpt_name: str, test_dataset: str = "test-grader"):
+    print(f'{ckpt_name=}')
+    global processor
+    processor = AutoProcessor.from_pretrained(ckpt_name)
+
     testset = VQADataset(test_dataset)
 
-    llm = load(ckpt_path)
+    llm = load(ckpt_path, ckpt_name)
 
     benchmark_result = benchmark(llm, testset, 128)
     print(benchmark_result.accuracy)
