@@ -109,7 +109,7 @@ class VQADatasetForTraining(Dataset):
 
 def train(
     data_dir: Path | None = None,
-    train_dataset_name: str = "train",
+    train_dataset_name: str = "train-grader",
     # output_dir: str = "vlm_sft",
     # output_dir: str = "homework/vlm_model",
     output_dir: str = "src/vlm_model",
