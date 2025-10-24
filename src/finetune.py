@@ -288,7 +288,7 @@ def test_model(ckpt_path: str, ckpt_name: str, max_samples: int = 500, test_data
 
     llm = load(ckpt_name, ckpt_path)
 
-    benchmark_result = benchmark(llm, valset, max_samples)
+    benchmark_result = benchmark(llm, testset, max_samples)
     print(benchmark_result.accuracy)
 
 
