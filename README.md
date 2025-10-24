@@ -45,4 +45,5 @@ python -m src.finetune val vlm_model/SmolVLM-256M-Instruct HuggingFaceTB/SmolVLM
 Final Test:
 Benchmark:
 ```bash
-python -m src.finetune test vlm_model/SmolVLM-256M-Instruct HuggingFaceTB/SmolVLM-256M-Instruct```
+python -m src.finetune test vlm_model/SmolVLM-256M-Instruct HuggingFaceTB SmolVLM-256M-Instruct
+```
