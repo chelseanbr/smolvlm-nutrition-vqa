@@ -257,7 +257,7 @@ def demo_train():
     )
 
 
-def val_model(ckpt_path: str, val_dataset: str = "valid_grader"):
+def val_model(ckpt_path: str, val_dataset: str = "val-grader"):
     valset = VQADataset(val_dataset)
 
     llm = load(ckpt_path)
@@ -266,7 +266,7 @@ def val_model(ckpt_path: str, val_dataset: str = "valid_grader"):
     print(benchmark_result.accuracy)
 
 
-def test_model(ckpt_path: str, test_dataset: str = "test_grader"):
+def test_model(ckpt_path: str, test_dataset: str = "test-grader"):
     testset = VQADataset(test_dataset)
 
     llm = load(ckpt_path)
