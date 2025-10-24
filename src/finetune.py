@@ -266,7 +266,7 @@ def demo_train(ckpt_name: str):
     )
 
 
-def val_model(ckpt_path: str, ckpt_name: str, val_dataset: str = "val-grader"):
+def val_model(ckpt_path: str, ckpt_name: str, max_samples: int = 500, val_dataset: str = "val-grader"):
     print(f'{ckpt_name=}')
     global processor
     processor = AutoProcessor.from_pretrained(ckpt_name)
@@ -275,11 +275,11 @@ def val_model(ckpt_path: str, ckpt_name: str, val_dataset: str = "val-grader"):
 
     llm = load(ckpt_name, ckpt_path)
 
-    benchmark_result = benchmark(llm, valset, 128)
+    benchmark_result = benchmark(llm, valset, max_samples)
     print(benchmark_result.accuracy)
 
 
-def test_model(ckpt_path: str, ckpt_name: str, test_dataset: str = "test-grader"):
+def test_model(ckpt_path: str, ckpt_name: str, max_samples: int = 500, test_dataset: str = "test-grader"):
     print(f'{ckpt_name=}')
     global processor
     processor = AutoProcessor.from_pretrained(ckpt_name)
@@ -288,7 +288,7 @@ def test_model(ckpt_path: str, ckpt_name: str, test_dataset: str = "test-grader"
 
     llm = load(ckpt_name, ckpt_path)
 
-    benchmark_result = benchmark(llm, testset, 128)
+    benchmark_result = benchmark(llm, valset, max_samples)
     print(benchmark_result.accuracy)
 
 
