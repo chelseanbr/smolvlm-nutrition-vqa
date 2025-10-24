@@ -9,6 +9,14 @@ conda activate csml-proj
 pip install -r requirements.txt
 ```
 
+## Data
+```bash
+tar -czvf data.tar.gz data
+```
+```bash
+tar -xzvf data.tar.gz
+```
+
 ## Finetuning
 ### Demo Data
 

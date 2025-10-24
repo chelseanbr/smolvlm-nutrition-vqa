@@ -210,3 +210,5 @@ __marimo__/
 data/
 models/
 archive/
+data.tar.gz
+src/demo_train
