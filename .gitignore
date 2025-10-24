@@ -211,4 +211,6 @@ data/
 models/
 archive/
 data.tar.gz
-src/demo_train
+src/demo_train/
+src/vlm_model
+._data
