@@ -17,7 +17,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is
 # processor = AutoProcessor.from_pretrained(DEFAULT_MODEL)
 
 
-def load(model_name: str = "vlm_model", ckpt_name: str) -> BaseVLM:
+def load(ckpt_name: str, model_name: str = "vlm_model") -> BaseVLM:
     from pathlib import Path
 
     from peft import PeftModel
@@ -253,7 +253,7 @@ def evaluate(model: nn.Module, val_loader: DataLoader) -> float:
 
 def demo_train(ckpt_name: str):
     train(
-        ckpt_name=ckpt_name
+        ckpt_name=ckpt_name,
         train_dataset_name="train_demo",
         # output_dir="demo_train",
         # output_dir="homework/demo_train",
@@ -273,7 +273,7 @@ def val_model(ckpt_path: str, ckpt_name: str, val_dataset: str = "val-grader"):
 
     valset = VQADataset(val_dataset)
 
-    llm = load(ckpt_path, ckpt_name)
+    llm = load(ckpt_name, ckpt_path)
 
     benchmark_result = benchmark(llm, valset, 128)
     print(benchmark_result.accuracy)
@@ -286,7 +286,7 @@ def test_model(ckpt_path: str, ckpt_name: str, test_dataset: str = "test-grader"
 
     testset = VQADataset(test_dataset)
 
-    llm = load(ckpt_path, ckpt_name)
+    llm = load(ckpt_name, ckpt_path)
 
     benchmark_result = benchmark(llm, testset, 128)
     print(benchmark_result.accuracy)
