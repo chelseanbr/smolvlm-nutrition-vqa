@@ -215,6 +215,11 @@ def train(
     # Train the model
     trainer.train()
 
+    # Save loss to TensorBoard
+    for i, log in enumerate(trainer.state.log_history):
+        if "loss" in log:
+            writer.add_scalar("Loss/train", log["loss"], i)
+
     # Save the model
     trainer.save_model(output_dir)
 

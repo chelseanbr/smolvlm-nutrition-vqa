@@ -138,6 +138,7 @@ class BaseVLM:
         return self.batched_generate(image_paths, questions)
 
 
+# TODO: Update for my csml model
 def test_model():
     # Test the BaseVLM with a sample image and question
     model = BaseVLM()
