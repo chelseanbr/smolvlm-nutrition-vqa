@@ -136,8 +136,7 @@ def train(
     num_workers: int = 16,
     evaluation_strategy="steps", # Switch to "steps" to evaluate frequently
     eval_steps=50,               # Evaluate every 50 steps (same as save_steps)
-    load_best_model_at_end=True, # Load the model with the lowest validation loss at the end
-    metric_for_best_model="eval_loss", # Use the built-in validation loss
+    load_best_model_at_end=True, # Load best model at end based on eval metric
 ):
     """
     Fine-tune a VLM model using LoRA.
@@ -223,7 +222,8 @@ def train(
         eval_strategy=evaluation_strategy,
         eval_steps=eval_steps,
         load_best_model_at_end=load_best_model_at_end,
-        metric_for_best_model=metric_for_best_model,
+        metric_for_best_model="eval_iron_mg_mae",
+        greater_is_better=False,  # Lower MAE is better
     )
 
     # Define the partial function to inject the required data
@@ -248,10 +248,29 @@ def train(
     # Train the model
     trainer.train()
 
-    # Save loss to TensorBoard
-    for i, log in enumerate(trainer.state.log_history):
-        if "loss" in log:
-            writer.add_scalar("Loss/train", log["loss"], i)
+    # --- MANUAL LOGGING OF ALL METRICS FROM HISTORY ---
+    # This loop is designed to capture all logged metrics (train and eval)
+    
+    # NOTE: The step number (i) should actually be taken from the 'step' key 
+    #       in the log dictionary, not the enumerate index.
+    
+    for log in trainer.state.log_history:
+        # Check for the step number
+        step = log.get("step")
+        if step is None:
+            # If 'step' is missing (e.g., initial logs), skip or use a counter
+            continue 
+
+        for key, value in log.items():
+            # 1. Log Training Loss
+            if key == "loss":
+                writer.add_scalar("Loss/train", value, step)
+            
+            # 2. Log Evaluation Metrics (includes eval_loss and all your custom MAE/RMSE)
+            elif key.startswith("eval_"):
+                # Clean up the key name for better grouping in TensorBoard if desired,
+                # but using the full key name is safer.
+                writer.add_scalar(f"Evaluation/{key}", value, step)
 
     # Save the model
     trainer.save_model(output_dir)
