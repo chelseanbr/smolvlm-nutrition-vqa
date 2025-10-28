@@ -121,14 +121,14 @@ class VQADatasetForTraining(Dataset):
 def train(
     ckpt_name: str,
     num_train_epochs: int = 0.05,  # use only 0.05 epoch for training
+    per_device_train_batch_size: int = 8,
+    gradient_accumulation_steps: int = 4,
     data_dir: Path | None = None,
     train_dataset_name: str = "train-grader",
     val_dataset_name: str = "val-grader",
     # output_dir: str = "vlm_sft",
     # output_dir: str = "homework/vlm_model",
     output_dir: str = "src/vlm_model",
-    per_device_train_batch_size: int = 8,
-    gradient_accumulation_steps: int = 4,
     learning_rate: float = 5e-4,
     lora_r: int = 8,
     lora_alpha: int = 32,
