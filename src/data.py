@@ -55,7 +55,7 @@ class VQADataset:
         return {
             "image_path": image_path,
             "question": qa_pair["question"],
-            "answer": qa_pair["answer"],
+            "answer": str(qa_pair["answer"]),
         }
 
 
