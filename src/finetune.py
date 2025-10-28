@@ -227,6 +227,7 @@ def train(
         lr_scheduler_type="cosine",
         warmup_ratio=0.03,
         gradient_checkpointing=True,
+        per_device_eval_batch_size=32,
     )
 
     # Define the partial function to inject the required data
