@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import functools
 import numpy as np
 import torch
 import torch.nn as nn
@@ -16,8 +17,14 @@ from .data import VQADataset, benchmark
 
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 # DEFAULT_MODEL = "HuggingFaceTB/SmolVLM-256M-Instruct"
+# Define the fixed order and labels outside the function
+MACRO_LABELS = ["calories_kcal", "fat_g", "protein_g", "carbs_g"]
+MICRO_LABELS = ["total_weight_g", "iron_mg", "calcium_mg", "vitamin_C_mg"] 
+ALL_LABELS = MACRO_LABELS + MICRO_LABELS
+NUM_VALUES = len(ALL_LABELS) # Should be 8
 
 # processor = AutoProcessor.from_pretrained(DEFAULT_MODEL)
+processor = None
 
 
 def load(ckpt_name: str, model_name: str = "vlm_model") -> BaseVLM:
@@ -34,7 +41,7 @@ def load(ckpt_name: str, model_name: str = "vlm_model") -> BaseVLM:
     return vlm
 
 
-def custom_data_collator(features: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
+def custom_data_collator(features: list[dict[str, torch.Tensor]], processor) -> dict[str, torch.Tensor]:
     # Get max sequence length
     max_length = max(f["input_ids"].shape[0] for f in features)
 
@@ -116,6 +123,7 @@ def train(
     num_train_epochs: int = 0.05,  # use only 0.05 epoch for training
     data_dir: Path | None = None,
     train_dataset_name: str = "train-grader",
+    val_dataset_name: str = "val-grader",
     # output_dir: str = "vlm_sft",
     # output_dir: str = "homework/vlm_model",
     output_dir: str = "src/vlm_model",
@@ -126,6 +134,10 @@ def train(
     lora_alpha: int = 32,
     lora_dropout: float = 0.0,
     num_workers: int = 16,
+    evaluation_strategy="steps", # Switch to "steps" to evaluate frequently
+    eval_steps=50,               # Evaluate every 50 steps (same as save_steps)
+    load_best_model_at_end=True, # Load the model with the lowest validation loss at the end
+    metric_for_best_model="eval_loss", # Use the built-in validation loss
 ):
     """
     Fine-tune a VLM model using LoRA.
@@ -183,8 +195,11 @@ def train(
 
     # Prepare datasets
     train_dataset = VQADataset(train_dataset_name, data_dir)
+    val_dataset_raw = VQADataset(val_dataset_name, data_dir) # Keep raw dataset
+    val_questions = [item["question"] for item in val_dataset_raw] # Extract questions
 
     train_dataset = VQADatasetForTraining(train_dataset, processor)
+    val_dataset_processed = VQADatasetForTraining(val_dataset_raw, processor)
 
     if processor.tokenizer.pad_token is None:
         processor.tokenizer.pad_token = processor.tokenizer.eos_token
@@ -201,18 +216,33 @@ def train(
         bf16=True,
         logging_steps=1,
         save_strategy="steps",
-        save_steps=50,
+        save_steps=eval_steps,
         save_total_limit=2,
         label_names=["labels"],
         dataloader_num_workers=num_workers,
+        eval_strategy=evaluation_strategy,
+        eval_steps=eval_steps,
+        load_best_model_at_end=load_best_model_at_end,
+        metric_for_best_model=metric_for_best_model,
     )
+
+    # Define the partial function to inject the required data
+    metric_fn = functools.partial(
+        compute_metrics, 
+        processor=processor, 
+        val_questions=val_questions
+)
+
+    collator_fn = functools.partial(custom_data_collator, processor=processor)
 
     # Initialize trainer
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
-        data_collator=custom_data_collator,
+        eval_dataset=val_dataset_processed,
+        data_collator=collator_fn,
+        compute_metrics=metric_fn,
     )
 
     # Train the model
@@ -259,42 +289,117 @@ def evaluate(model: nn.Module, val_loader: DataLoader) -> float:
     return val_loss / len(val_loader)
 
 
-def compute_metrics(eval_pred):
-    # This function is called AFTER the evaluation run
+def compute_metrics(eval_pred, processor, val_questions) -> dict[str, float]:
+    tokenizer = processor.tokenizer
     predictions, labels = eval_pred
+
+    # ... (Data Type and Casting - remains the same) ...
+    if isinstance(predictions, torch.Tensor):
+        predictions = predictions.detach().cpu().numpy()
+    if predictions.ndim > 2:
+        predictions = np.argmax(predictions, axis=-1)
+    if isinstance(labels, torch.Tensor):
+        labels = labels.detach().cpu().numpy()
+    labels = labels.astype(np.int64)
+    predictions = predictions.astype(np.int64)
+    labels[labels == -100] = tokenizer.pad_token_id 
     
-    # --- Post-Processing: Extracting Numeric Values from Text ---
-    # You must decode the token predictions/labels and parse the numbers.
-    # Example: pred_text = tokenizer.batch_decode(predictions)
+    pred_strs = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+    label_strs = tokenizer.batch_decode(labels, skip_special_tokens=True)
     
-    # Assume: extracted_preds and extracted_labels are lists of float arrays
-    # E.g., extracted_preds = [ [601.2, 39.5, ..., 15.50], ... ]
+    # --- Metric Storage Initialization ---
+    true_regression_values = [[] for _ in range(NUM_VALUES)]
+    pred_regression_values = [[] for _ in range(NUM_VALUES)]
+    true_class_labels = []
+    pred_class_labels = []
+    metrics = {}
     
-    # Target Index (assuming Iron is the 6th value in the fixed order)
-    IRON_INDEX = 5 
-    
-    # Extract only the Iron prediction/label for all samples
-    pred_iron = np.array([p[IRON_INDEX] for p in extracted_preds])
-    true_iron = np.array([l[IRON_INDEX] for l in extracted_labels])
-    
-    # --- Calculate Regression Metrics ---
-    mae = mean_absolute_error(true_iron, pred_iron)
-    rmse = np.sqrt(mean_squared_error(true_iron, pred_iron))
-    
-    # You can also compute standard accuracy for the classification questions 
-    # if you parse them out of the predictions.
-    
-    return {
-        "iron_mae": mae,
-        "iron_rmse": rmse,
-        # "category_accuracy": ...
-    }
+    # --- PARSING LOOP ---
+    for sample_index, (pred_str, label_str) in enumerate(zip(pred_strs, label_strs)):
+        
+        clean_label = label_str.strip().lower()
+        clean_pred = pred_str.strip().lower()
+
+        # Check if it's a regression output (contains a comma)
+        if ',' in clean_label:
+            # --- REGRESSION TASK LOGIC ---
+            
+            # 1. Parse GROUND TRUTH (must succeed for sample to be valid)
+            try:
+                true_list = [float(x.strip()) for x in clean_label.split(',')]
+            except Exception:
+                continue # Skip if ground truth itself is malformed
+            
+            # 2. Parse PREDICTION (must handle failure by defaulting to zero)
+            try:
+                # Attempt to parse the prediction normally
+                pred_list = [float(x.strip()) for x in clean_pred.split(',')]
+                
+                # Check for correct length, which is a common failure point
+                if len(pred_list) != len(true_list):
+                    raise ValueError("Prediction list length mismatch.")
+
+            except Exception:
+                # If parsing or length check fails, set predicted values to 0.0
+                pred_list = [0.0] * len(true_list)
+            
+            # 3. Identify Task and Append Values
+            try:
+                question = val_questions[sample_index]
+                q_lower = question.lower()
+                
+                if "calories" in q_lower or "fat" in q_lower:
+                    base_index = 0
+                elif "total weight" in q_lower or "iron" in q_lower:
+                    base_index = 4
+                else:
+                    # If question is ambiguous, skip appending, but only if its a regression sample
+                    continue 
+
+                for i in range(len(true_list)):
+                    true_regression_values[base_index + i].append(true_list[i])
+                    pred_regression_values[base_index + i].append(pred_list[i])
+            
+            except Exception:
+                # Skip if index access or question handling fails
+                continue
+            
+        else:
+            # --- CLASSIFICATION TASK LOGIC (remains the same) ---
+            true_class_labels.append(clean_label)
+            answer_len = len(clean_label)
+            
+            if clean_pred[:answer_len] == clean_label:
+                pred_class_labels.append(clean_label) 
+            else:
+                pred_class_labels.append(clean_pred)
+
+    # --- Calculation Loop (Now guaranteed to run if val set has regression samples) ---
+    for i, label_name in enumerate(ALL_LABELS):
+        true_values = np.array(true_regression_values[i])
+        pred_values = np.array(pred_regression_values[i])
+        
+        if len(true_values) > 0:
+            mae = mean_absolute_error(true_values, pred_values)
+            rmse = np.sqrt(mean_squared_error(true_values, pred_values))
+            
+            metrics[f"eval_{label_name}_mae"] = mae
+            metrics[f"eval_{label_name}_rmse"] = rmse
+
+    # --- Classification Metrics ---
+    if true_class_labels:
+        correct_count = sum(1 for t, p in zip(true_class_labels, pred_class_labels) if t == p)
+        total_samples = len(true_class_labels)
+        metrics["eval_classification_accuracy"] = correct_count / total_samples
+        
+    return metrics
 
 
 def demo_train(ckpt_name: str):
     train(
         ckpt_name=ckpt_name,
         train_dataset_name="train_demo",
+        val_dataset_name="val_demo",
         # output_dir="demo_train",
         # output_dir="homework/demo_train",
         output_dir="src/demo_train",
@@ -303,6 +408,7 @@ def demo_train(ckpt_name: str):
         num_workers=1,
         gradient_accumulation_steps=1,
         learning_rate=1e-8,
+        eval_steps=4,
     )
 
 
