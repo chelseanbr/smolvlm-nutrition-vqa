@@ -291,19 +291,36 @@ def evaluate(model: nn.Module, val_loader: DataLoader) -> float:
 
 def compute_metrics(eval_pred, processor, val_questions) -> dict[str, float]:
     tokenizer = processor.tokenizer
+    
+    # eval_pred is a tuple (predictions, labels)
     predictions, labels = eval_pred
 
-    # ... (Data Type and Casting - remains the same) ...
+    # --- FIX: ROBUST PREDICTION EXTRACTION ---
+    # 1. Handle the case where predictions is a tuple (the source of the error)
+    if isinstance(predictions, tuple) or isinstance(predictions, list):
+        predictions = predictions[0] # Take the first element, which should be the core tensor/array
+    
+    # 2. Ensure data is a NumPy array for consistent processing
     if isinstance(predictions, torch.Tensor):
         predictions = predictions.detach().cpu().numpy()
+        
+    # If the predictions are logits (3D), take argmax to get token IDs (2D)
+    # This check now runs safely after we've confirmed 'predictions' is a NumPy array.
     if predictions.ndim > 2:
         predictions = np.argmax(predictions, axis=-1)
+
+    # Process labels (remains the same)
     if isinstance(labels, torch.Tensor):
         labels = labels.detach().cpu().numpy()
+
+    # Cast to int64 for safe tokenization/decoding
     labels = labels.astype(np.int64)
     predictions = predictions.astype(np.int64)
+
+    # Replace the ignore index (-100) with the pad token ID for decoding
     labels[labels == -100] = tokenizer.pad_token_id 
     
+    # Batch decode
     pred_strs = tokenizer.batch_decode(predictions, skip_special_tokens=True)
     label_strs = tokenizer.batch_decode(labels, skip_special_tokens=True)
     
