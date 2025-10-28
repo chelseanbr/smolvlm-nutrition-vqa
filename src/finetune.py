@@ -137,6 +137,7 @@ def train(
     num_workers: int = 16,
     evaluation_strategy="steps", # Switch to "steps" to evaluate frequently
     load_best_model_at_end=True, # Load best model at end based on eval metric
+    logging_steps=50
 ):
     """
     Fine-tune a VLM model using LoRA.
@@ -213,7 +214,7 @@ def train(
         gradient_accumulation_steps=gradient_accumulation_steps,
         learning_rate=learning_rate,
         bf16=True,
-        logging_steps=1,
+        logging_steps=logging_steps,
         save_strategy="steps",
         save_steps=eval_steps,
         save_total_limit=2,
@@ -449,6 +450,7 @@ def demo_train(ckpt_name: str):
         gradient_accumulation_steps=1,
         learning_rate=1e-8,
         eval_steps=4,
+        logging_steps=1,
     )
 
 
