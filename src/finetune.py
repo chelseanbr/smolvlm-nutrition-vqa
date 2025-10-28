@@ -237,7 +237,7 @@ def train(
         per_device_eval_batch_size=1,
         eval_accumulation_steps=1,
         predict_with_generate=False,
-        gradient_checkpointing_kwargs={"use_reentrant": False}
+        gradient_checkpointing_kwargs={"use_reentrant": False},
     )
 
     # Define the partial function to inject the required data
