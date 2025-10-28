@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import functools
+import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -25,6 +26,7 @@ NUM_VALUES = len(ALL_LABELS) # Should be 8
 
 # processor = AutoProcessor.from_pretrained(DEFAULT_MODEL)
 processor = None
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 
 def load(ckpt_name: str, model_name: str = "vlm_model") -> BaseVLM:
@@ -134,7 +136,7 @@ def train(
     output_dir: str = "src/vlm_model",
     learning_rate: float = 5e-4,
     lora_dropout: float = 0.0,
-    num_workers: int = 16,
+    num_workers: int = 12,
     evaluation_strategy="steps", # Switch to "steps" to evaluate frequently
     load_best_model_at_end=True, # Load best model at end based on eval metric
     logging_steps=50
@@ -174,6 +176,9 @@ def train(
     # Initialize model and processor
     processor = vlm.processor
     model = vlm.model
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     # Configure LoRA
     peft_config = LoraConfig(
@@ -228,7 +233,7 @@ def train(
         lr_scheduler_type="cosine",
         warmup_ratio=0.03,
         gradient_checkpointing=True,
-        per_device_eval_batch_size=32,
+        per_device_eval_batch_size=4,
     )
 
     # Define the partial function to inject the required data
@@ -249,6 +254,8 @@ def train(
         data_collator=collator_fn,
         compute_metrics=metric_fn,
     )
+
+    model.config.max_new_tokens = 48
 
     # Train the model
     trainer.train()
