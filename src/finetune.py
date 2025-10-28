@@ -1,10 +1,12 @@
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from peft import LoraConfig, TaskType, get_peft_model
 from PIL import Image
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
 from transformers import AutoProcessor, Trainer, TrainingArguments
@@ -205,53 +207,6 @@ def train(
         dataloader_num_workers=num_workers,
     )
 
-
-# class CustomVLMTrainer(Trainer):
-#     def compute_loss(self, model, inputs, return_outputs=False):
-#         # 1. Standard Forward Pass and Cross-Entropy Loss
-#         # This is where the model predicts logits and computes the base CE loss
-#         outputs = model(**inputs)
-#         base_ce_loss = outputs.loss
-        
-#         # 2. Extract and Prepare Regression Targets
-#         # This step is highly model and data-format dependent and is complex in practice.
-#         # It assumes your data preparation step has correctly identified and stored 
-#         # the indices for numeric labels and their true float values.
-
-        
-#         # Placeholder: Assume a custom key in 'inputs' holds the regression data
-#         regression_data = inputs.get('regression_targets', None)
-        
-#         if regression_data is not None:
-#             # You would need a function to map logits to continuous values
-#             # E.g., by extracting logits for number tokens and feeding them 
-#             # to a small regression head, or directly treating the token 
-#             # probability as a distribution over a number range (very complex)
-            
-#             # A simpler, common approach for structured output is to force the 
-#             # model to output a single numeric token, then compute loss on it.
-            
-#             # --- Hypothetical Iron-Specific Loss ---
-            
-#             # Get the predicted logits for the iron value tokens (complex extraction needed)
-#             # pred_iron_tokens = extract_iron_prediction(outputs.logits, inputs.labels)
-            
-#             # Convert token logits to a single predicted float value (e.g., using mean or a linear layer)
-#             # pred_iron_value = map_tokens_to_float(pred_iron_tokens) 
-            
-#             # true_iron_value = regression_data['true_iron']
-            
-#             # regression_loss = F.mse_loss(pred_iron_value, true_iron_value)
-            
-#             # L_total = L_CE + lambda * L_Regression
-#             # total_loss = base_ce_loss + 0.1 * regression_loss
-            
-#             # For demonstration, we'll return only CE loss as the full implementation is too complex for a sketch
-#             return base_ce_loss
-
-#         return (base_ce_loss, outputs) if return_outputs else base_ce_loss
-
-
     # Initialize trainer
     trainer = Trainer(
         model=model,
@@ -302,6 +257,38 @@ def evaluate(model: nn.Module, val_loader: DataLoader) -> float:
 
     model.train()
     return val_loss / len(val_loader)
+
+
+def compute_metrics(eval_pred):
+    # This function is called AFTER the evaluation run
+    predictions, labels = eval_pred
+    
+    # --- Post-Processing: Extracting Numeric Values from Text ---
+    # You must decode the token predictions/labels and parse the numbers.
+    # Example: pred_text = tokenizer.batch_decode(predictions)
+    
+    # Assume: extracted_preds and extracted_labels are lists of float arrays
+    # E.g., extracted_preds = [ [601.2, 39.5, ..., 15.50], ... ]
+    
+    # Target Index (assuming Iron is the 6th value in the fixed order)
+    IRON_INDEX = 5 
+    
+    # Extract only the Iron prediction/label for all samples
+    pred_iron = np.array([p[IRON_INDEX] for p in extracted_preds])
+    true_iron = np.array([l[IRON_INDEX] for l in extracted_labels])
+    
+    # --- Calculate Regression Metrics ---
+    mae = mean_absolute_error(true_iron, pred_iron)
+    rmse = np.sqrt(mean_squared_error(true_iron, pred_iron))
+    
+    # You can also compute standard accuracy for the classification questions 
+    # if you parse them out of the predictions.
+    
+    return {
+        "iron_mae": mae,
+        "iron_rmse": rmse,
+        # "category_accuracy": ...
+    }
 
 
 def demo_train(ckpt_name: str):
