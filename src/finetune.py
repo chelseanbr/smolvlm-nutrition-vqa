@@ -89,7 +89,7 @@ class VQADatasetForTraining(Dataset):
 
         # Get answer length
         answer_ids = self.processor(
-            images=None, text=item["answer"], return_tensors="pt", truncation=True
+            images=None, text=str(item["answer"]), return_tensors="pt", truncation=True
         ).input_ids.squeeze(0)
         answer_len = len(answer_ids)
 
