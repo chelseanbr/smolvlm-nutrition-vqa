@@ -125,6 +125,7 @@ def train(
     gradient_accumulation_steps: int = 4,
     lora_r: int = 8,
     lora_alpha: int = 32,
+    eval_steps=50,       
     data_dir: Path | None = None,
     train_dataset_name: str = "train-grader",
     val_dataset_name: str = "val-grader",
@@ -135,7 +136,6 @@ def train(
     lora_dropout: float = 0.0,
     num_workers: int = 16,
     evaluation_strategy="steps", # Switch to "steps" to evaluate frequently
-    eval_steps=50,               # Evaluate every 50 steps (same as save_steps)
     load_best_model_at_end=True, # Load best model at end based on eval metric
 ):
     """
@@ -226,6 +226,7 @@ def train(
         greater_is_better=False,  # Lower MAE is better
         lr_scheduler_type="cosine",
         warmup_ratio=0.03,
+        gradient_checkpointing=True,
     )
 
     # Define the partial function to inject the required data
