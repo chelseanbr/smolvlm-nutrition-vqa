@@ -123,6 +123,8 @@ def train(
     num_train_epochs: int = 0.05,  # use only 0.05 epoch for training
     per_device_train_batch_size: int = 8,
     gradient_accumulation_steps: int = 4,
+    lora_r: int = 8,
+    lora_alpha: int = 32,
     data_dir: Path | None = None,
     train_dataset_name: str = "train-grader",
     val_dataset_name: str = "val-grader",
@@ -130,8 +132,6 @@ def train(
     # output_dir: str = "homework/vlm_model",
     output_dir: str = "src/vlm_model",
     learning_rate: float = 5e-4,
-    lora_r: int = 8,
-    lora_alpha: int = 32,
     lora_dropout: float = 0.0,
     num_workers: int = 16,
     evaluation_strategy="steps", # Switch to "steps" to evaluate frequently
@@ -224,6 +224,8 @@ def train(
         load_best_model_at_end=load_best_model_at_end,
         metric_for_best_model="eval_iron_mg_mae",
         greater_is_better=False,  # Lower MAE is better
+        lr_scheduler_type="cosine",
+        warmup_ratio=0.03,
     )
 
     # Define the partial function to inject the required data
