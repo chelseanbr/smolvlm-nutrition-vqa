@@ -361,23 +361,23 @@ def compute_metrics_test(responses: list[str], gt_answers: list[str], gt_questio
             mae = mean_absolute_error(true_values, pred_values)
             rmse = np.sqrt(mean_squared_error(true_values, pred_values))
             
-            # --- START MAPE CALCULATION ---
+            # # --- START MAPE CALCULATION ---
             
-            # 1. Define safe denominator: use 1e-8 instead of 0 to prevent division by zero
-            true_values_safe = np.where(true_values == 0, 1e-8, true_values) 
+            # # 1. Define safe denominator: use 1e-8 instead of 0 to prevent division by zero
+            # true_values_safe = np.where(true_values == 0, 1e-8, true_values) 
             
-            # 2. Calculate the Absolute Percentage Error for every sample
-            # |y_i - y_hat_i| / y_i
-            absolute_percentage_error = np.abs((true_values - pred_values) / true_values_safe)
+            # # 2. Calculate the Absolute Percentage Error for every sample
+            # # |y_i - y_hat_i| / y_i
+            # absolute_percentage_error = np.abs((true_values - pred_values) / true_values_safe)
             
-            # 3. Calculate MAPE (Mean of the Absolute Percentage Error), multiplied by 100 to get a percentage
-            mape = np.mean(absolute_percentage_error) * 100
+            # # 3. Calculate MAPE (Mean of the Absolute Percentage Error), multiplied by 100 to get a percentage
+            # mape = np.mean(absolute_percentage_error) * 100
             
-            # --- END MAPE CALCULATION ---
+            # # --- END MAPE CALCULATION ---
             
             metrics[f"{label_name}_mae"] = mae
             metrics[f"{label_name}_rmse"] = rmse
-            metrics[f"{label_name}_mape"] = mape # <-- New Metric Added
+            # metrics[f"{label_name}_mape"] = mape # <-- New Metric Added
 
     # B. Classification Metrics (Accuracy)
     if true_class_labels:
