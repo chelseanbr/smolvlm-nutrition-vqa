@@ -240,12 +240,12 @@ def train(
         gradient_checkpointing_kwargs={"use_reentrant": False},
     )
 
-    # Define the partial function to inject the required data
-    metric_fn = functools.partial(
-        compute_metrics, 
-        processor=processor, 
-        val_questions=val_questions
-    )
+    # # Define the partial function to inject the required data
+    # metric_fn = functools.partial(
+    #     compute_metrics, 
+    #     processor=processor, 
+    #     val_questions=val_questions
+    # )
 
     collator_fn = functools.partial(custom_data_collator, processor=processor)
 
