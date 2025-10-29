@@ -12,3 +12,5 @@ scikit-learn
 dotenv
 rapidfuzz
 tensorboard
+fuzzywuzzy 
+python-levenshtein

@@ -14,15 +14,10 @@ from torch.utils.tensorboard import SummaryWriter
 from transformers import AutoProcessor, Trainer, TrainingArguments
 
 from .base_vlm import BaseVLM
-from .data import VQADataset, benchmark
+from .data import VQADataset, benchmark, benchmark_extended, compute_metrics_test, MACRO_LABELS, MICRO_LABELS, ALL_LABELS, NUM_VALUES
 
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 # DEFAULT_MODEL = "HuggingFaceTB/SmolVLM-256M-Instruct"
-# Define the fixed order and labels outside the function
-MACRO_LABELS = ["calories_kcal", "fat_g", "protein_g", "carbs_g"]
-MICRO_LABELS = ["total_weight_g", "iron_mg", "calcium_mg", "vitamin_C_mg"] 
-ALL_LABELS = MACRO_LABELS + MICRO_LABELS
-NUM_VALUES = len(ALL_LABELS) # Should be 8
 
 # processor = AutoProcessor.from_pretrained(DEFAULT_MODEL)
 processor = None
@@ -501,7 +496,71 @@ def test_model(ckpt_path: str, ckpt_name: str, max_samples: int = 256, test_data
     print(benchmark_result.accuracy)
 
 
+def get_ext_benchmark(ckpt_path: str, ckpt_name: str, dataset: str = "val-grader", 
+                      mini_batch_size: int = 32, max_samples = None):
+    print(f'{ckpt_name=}')
+    global processor
+    processor = AutoProcessor.from_pretrained(ckpt_name)
+
+    testset = VQADataset(dataset)
+
+    llm = load(ckpt_name, ckpt_path)
+
+    # The benchmark_result object now includes the questions and answers/responses
+    # benchmark_result_with_data = benchmark(llm, testset, max_samples)
+    benchmark_result_with_data = benchmark_extended(llm, testset, mini_batch_size, max_samples)
+
+    # Extract required lists from the benchmark result and dataset
+    responses = [s.model_answer for s in benchmark_result_with_data.samples]
+    gt_answers = [s.correct_answer for s in benchmark_result_with_data.samples]
+    gt_questions = [s.question for s in benchmark_result_with_data.samples]
+    
+    # --- CALCULATE ALL METRICS ---
+    final_metrics = compute_metrics_test(responses, gt_answers, gt_questions)
+    
+    print("\n" + "="*50)
+    print(f"      FINAL BENCHMARK RESULTS ({dataset.upper()} SET)")
+    print("="*50)
+    
+    # --- NEW SECTION: CLASSIFICATION ACCURACY ---
+    
+    # 1. Print Total Classification Accuracy
+    total_accuracy_strict = final_metrics.get("total_accuracy_strict", 0.0)
+    total_accuracy_fuzzy = final_metrics.get("total_accuracy_fuzzy", 0.0)
+    
+    print("CLASSIFICATION ACCURACY:")
+    print(f"  {'TOTAL ACCURACY (Strict)':<25} | {total_accuracy_strict:.4f}")
+    print(f"  {'TOTAL ACCURACY (Fuzzy 90)':<25} | {total_accuracy_fuzzy:.4f}") # <-- NEW Printout
+    
+    # 2. Print Per-Type Classification Accuracy
+    classification_types = ['dish_name', 'category', 'cooking_method']
+    
+    for q_type in classification_types:
+        display_name = q_type.replace('_', ' ').upper()
+        
+        accuracy_strict = final_metrics.get(f"accuracy_{q_type}_strict")
+        accuracy_fuzzy = final_metrics.get(f"accuracy_{q_type}_fuzzy") # <-- NEW Retrieval
+        
+        if accuracy_strict is not None:
+            print(f"  {display_name + ' ACCURACY (Strict)':<25} | {accuracy_strict:.4f}")
+        if accuracy_fuzzy is not None:
+            print(f"  {display_name + ' ACCURACY (Fuzzy 90)':<25} | {accuracy_fuzzy:.4f}") # <-- NEW Printout
+
+    # Print Regression Scores
+    print("\nREGRESSION SCORES (MAE/RMSE/MAPE):") # Updated Header
+    for label in ALL_LABELS:
+        mae = final_metrics.get(f"{label}_mae")
+        rmse = final_metrics.get(f"{label}_rmse")
+        # --- ADD MAPE RETRIEVAL ---
+        mape = final_metrics.get(f"{label}_mape")
+        
+        # Check for MAE/RMSE/MAPE to be present
+        if mae is not None and mape is not None:
+            # --- UPDATED PRINT FORMAT ---
+            print(f"  {label.upper():<15} | MAE: {mae:.4f} | RMSE: {rmse:.4f} | MAPE: {mape:.2f}%")
+
+
 if __name__ == "__main__":
     from fire import Fire
 
-    Fire({"demo_train": demo_train, "train": train, "val": val_model, "test": test_model})
+    Fire({"demo_train": demo_train, "train": train, "val": val_model, "test": test_model, "benchmark": get_ext_benchmark})
