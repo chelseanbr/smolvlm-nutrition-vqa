@@ -59,15 +59,13 @@ def custom_data_collator(features: list[dict[str, torch.Tensor]], processor) -> 
 
 
 class VQADatasetForTraining(Dataset):
-    def __init__(self, dataset: VQADataset, processor: AutoProcessor):
+    def __init__(self, dataset: VQADataset, processor: AutoProcessor, ckpt_name: str):
         self.dataset = dataset
         self.processor = processor
         self.features = ["image", "question", "answer"]
 
         # --- START FIX FOR IMAGE TOKEN LOOKUP ---
-        
-        # Get the checkpoint name being used
-        ckpt_name = processor.pretrained_model_name_or_path.lower()
+        ckpt_name = ckpt_name.lower()
         
         if 'qwen' in ckpt_name:
             # Qwen-VL models use the specific token: <|image|>
@@ -235,8 +233,8 @@ def train(
     val_dataset_raw = VQADataset(val_dataset_name, data_dir) # Keep raw dataset
     # val_questions = [item["question"] for item in val_dataset_raw] # Extract questions
 
-    train_dataset = VQADatasetForTraining(train_dataset, processor)
-    val_dataset_processed = VQADatasetForTraining(val_dataset_raw, processor)
+    train_dataset = VQADatasetForTraining(train_dataset, processor, ckpt_name)
+    val_dataset_processed = VQADatasetForTraining(val_dataset_raw, processor, ckpt_name)
 
     if processor.tokenizer.pad_token is None:
         processor.tokenizer.pad_token = processor.tokenizer.eos_token
