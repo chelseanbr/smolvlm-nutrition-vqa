@@ -13,7 +13,7 @@ class BaseVLM:
     def __init__(self, checkpoint="HuggingFaceTB/SmolVLM-256M-Instruct"):
         self.processor = AutoProcessor.from_pretrained(checkpoint)
 
-        if checkpoint != 'Qwen/Qwen2.5-VL-3B-Instruct':
+        if checkpoint.startswith("HuggingFaceTB/SmolVLM"):
             # important to set this to False, otherwise too many image tokens
             self.processor.image_processor.do_image_splitting = False
 
@@ -22,7 +22,7 @@ class BaseVLM:
                 torch_dtype=torch.bfloat16,
                 _attn_implementation="eager",
             ).to(DEVICE)
-        else:
+        else:  # Qwen
             self.model = AutoModelForVision2Seq.from_pretrained(
                 checkpoint,
                 # torch_dtype=torch.bfloat16,
