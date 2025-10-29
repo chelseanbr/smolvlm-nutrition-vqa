@@ -201,7 +201,7 @@ def train(
     # Prepare datasets
     train_dataset = VQADataset(train_dataset_name, data_dir)
     val_dataset_raw = VQADataset(val_dataset_name, data_dir) # Keep raw dataset
-    val_questions = [item["question"] for item in val_dataset_raw] # Extract questions
+    # val_questions = [item["question"] for item in val_dataset_raw] # Extract questions
 
     train_dataset = VQADatasetForTraining(train_dataset, processor)
     val_dataset_processed = VQADatasetForTraining(val_dataset_raw, processor)
@@ -228,13 +228,14 @@ def train(
         eval_strategy=evaluation_strategy,
         eval_steps=eval_steps,
         load_best_model_at_end=load_best_model_at_end,
-        metric_for_best_model="eval_iron_mg_mae",
-        greater_is_better=False,  # Lower MAE is better
+        # metric_for_best_model="eval_iron_mg_mae",
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,  # Lower is better
         lr_scheduler_type="cosine",
         warmup_ratio=0.03,
         gradient_checkpointing=True,
         # per_device_eval_batch_size=4,
-        per_device_eval_batch_size=1,
+        per_device_eval_batch_size=64,
         eval_accumulation_steps=1,
         gradient_checkpointing_kwargs={"use_reentrant": False},
     )
@@ -244,7 +245,7 @@ def train(
         compute_metrics, 
         processor=processor, 
         val_questions=val_questions
-)
+    )
 
     collator_fn = functools.partial(custom_data_collator, processor=processor)
 
@@ -255,10 +256,10 @@ def train(
         train_dataset=train_dataset,
         eval_dataset=val_dataset_processed,
         data_collator=collator_fn,
-        compute_metrics=metric_fn,
+        # compute_metrics=metric_fn,
     )
 
-    model.config.max_new_tokens = 48
+    # model.config.max_new_tokens = 48
 
     # Train the model
     trainer.train()
