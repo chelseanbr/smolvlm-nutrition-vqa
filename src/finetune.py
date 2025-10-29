@@ -64,28 +64,36 @@ class VQADatasetForTraining(Dataset):
         self.processor = processor
         self.features = ["image", "question", "answer"]
 
-        # --- START FIX FOR IMAGE TOKEN LOOKUP ---        
-        if 'Qwen' in ckpt_name:
-            # Qwen-VL models use the specific token: <|image|>
-            image_token_string = "<|image|>"
-        elif 'SmolVLM' in ckpt_name:
-            # SmolVLM uses the basic LLaVA token: <image>
-            image_token_string = "<image>"
-        else:
-            # Fallback for unexpected models
-            image_token_string = "<image>"
+# --- START FIX FOR IMAGE TOKEN LOOKUP ---        
+        ckpt_lower = ckpt_name.lower()
+        image_token_string = None
+        
+        # Define known VLM-specific image tokens
+        QWEN_TOKEN = "<|image|>"
+        LLAVA_TOKEN = "<image>"
+        
+        # 1. Search for the correct token in the vocabulary
+        if 'qwen' in ckpt_lower and QWEN_TOKEN in self.processor.tokenizer.get_vocab():
+            image_token_string = QWEN_TOKEN
+        
+        elif LLAVA_TOKEN in self.processor.tokenizer.get_vocab():
+            image_token_string = LLAVA_TOKEN
+        
+        elif 'minicpm' in ckpt_lower and LLAVA_TOKEN in self.processor.tokenizer.get_vocab():
+            # MiniCPM often uses the LLaVA token
+             image_token_string = LLAVA_TOKEN
 
-        # Find the token ID using the dictionary lookup, which is safer than index lookup
-        # We assume the token string is one of the additional special tokens
-        if image_token_string in self.processor.tokenizer.get_vocab():
+        # 2. Assign token ID or raise error
+        if image_token_string is not None:
+             # Safer lookup: directly access the ID from the vocabulary map
              self.image_token_id = self.processor.tokenizer.get_vocab()[image_token_string]
-        elif image_token_string in self.processor.tokenizer.additional_special_tokens:
-             # Look up in the additional special tokens IDs list (your original method)
-             self.image_token_id = self.processor.tokenizer.additional_special_tokens_ids[
-                 self.processor.tokenizer.additional_special_tokens.index(image_token_string)
-             ]
         else:
-            raise ValueError(f"Image token '{image_token_string}' not found in tokenizer vocabulary for {ckpt_name}. Check model documentation.")
+             # --- Original Error Catcher (Now less likely to hit) ---
+             # Provide better debugging information
+             raise ValueError(
+                 f"Image token not found in tokenizer vocabulary for {ckpt_name}. "
+                 f"Checked tokens: '{QWEN_TOKEN}', '{LLAVA_TOKEN}'."
+             )
         
         # --- END FIX ---
         
