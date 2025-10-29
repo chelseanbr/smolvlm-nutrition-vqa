@@ -64,13 +64,11 @@ class VQADatasetForTraining(Dataset):
         self.processor = processor
         self.features = ["image", "question", "answer"]
 
-        # --- START FIX FOR IMAGE TOKEN LOOKUP ---
-        ckpt_name = ckpt_name.lower()
-        
-        if 'qwen' in ckpt_name:
+        # --- START FIX FOR IMAGE TOKEN LOOKUP ---        
+        if 'Qwen' in ckpt_name:
             # Qwen-VL models use the specific token: <|image|>
             image_token_string = "<|image|>"
-        elif 'smolvlm' in ckpt_name:
+        elif 'SmolVLM' in ckpt_name:
             # SmolVLM uses the basic LLaVA token: <image>
             image_token_string = "<image>"
         else:
