@@ -235,7 +235,7 @@ def train(
         warmup_ratio=0.03,
         gradient_checkpointing=True,
         # per_device_eval_batch_size=4,
-        per_device_eval_batch_size=64,
+        per_device_eval_batch_size=256,
         eval_accumulation_steps=1,
         gradient_checkpointing_kwargs={"use_reentrant": False},
     )
