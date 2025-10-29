@@ -79,6 +79,16 @@ class VQADatasetForTraining(Dataset):
     def __getitem__(self, idx: int) -> dict:
         item = self.dataset[idx]
         image = Image.open(item["image_path"]).convert("RGB")
+
+        # # Define a safe maximum pixel dimension (e.g., 2000x2000)
+        # MAX_DIMENSION = 2000
+        # MAX_SIZE = (MAX_DIMENSION, MAX_DIMENSION) 
+
+        # # Check if the image size exceeds the limit AND is large enough to bother resizing
+        # if image.size[0] > MAX_DIMENSION or image.size[1] > MAX_DIMENSION:
+        #     # Use a high quality filter (LANCZOS) when downscaling
+        #     image.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
+
         # Prepare input text in chat format
         input_message = [{"role": "user", "content": [{"type": "image"}, {"type": "text", "text": item["question"]}]}]
         prompt = self.processor.apply_chat_template(input_message, add_generation_prompt=True)
