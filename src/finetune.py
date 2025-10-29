@@ -50,12 +50,29 @@ def custom_data_collator(features: list[dict[str, torch.Tensor]], processor) -> 
     labels = torch.stack([pad_tensor(f["labels"], pad_value=-100) for f in features])
     pixel_values = torch.stack([f["pixel_values"] for f in features])  # assume all are same shape
 
-    return {
-        "input_ids": input_ids,
-        "attention_mask": attention_mask,
-        "labels": labels,
-        "pixel_values": pixel_values,
-    }
+    # --- FIX: Handle the image_grid_thw key ---
+    grid_key = 'image_grid_thw'
+    
+    # Check if the grid key exists in the first feature item
+    if grid_key in features[0]:
+        # Assuming grid_thw is 1D tensor of (T, H, W) for Qwen, stack them
+        image_grid_thw = torch.stack([f[grid_key] for f in features])
+        
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels,
+            "pixel_values": pixel_values,
+            grid_key: image_grid_thw # Pass the grid to the model
+        }
+    else:
+        # Standard return if grid is not found (for non-Qwen models)
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels,
+            "pixel_values": pixel_values,
+        }
 
 
 class VQADatasetForTraining(Dataset):
@@ -69,7 +86,9 @@ class VQADatasetForTraining(Dataset):
             self.image_token_id = self.processor.tokenizer.additional_special_tokens_ids[
                 self.processor.tokenizer.additional_special_tokens.index("<image>")
             ]
-            
+        # else: # Qwen
+        #     self.image_token_id = self.processor.tokenizer.convert_tokens_to_ids("<image>")
+
         self.processor.tokenizer.pad_token = self.processor.tokenizer.eos_token
 
     def __len__(self):
@@ -102,6 +121,10 @@ class VQADatasetForTraining(Dataset):
             padding_side="left",
         )
 
+        # Check and extract the grid tensor if it exists (for Qwen/M-RoPE models)
+        grid_key = 'image_grid_thw'
+        grid_thw = inputs.get(grid_key, None)
+
         input_ids = inputs["input_ids"].squeeze(0)
         attention_mask = inputs["attention_mask"].squeeze(0)
 
@@ -121,12 +144,19 @@ class VQADatasetForTraining(Dataset):
             attention_mask = torch.cat([attention_mask, torch.tensor([1])])
             labels = torch.cat([labels, torch.tensor([self.processor.tokenizer.eos_token_id])])
 
-        return {
+        output = {
             "input_ids": input_ids.long(),
             "attention_mask": attention_mask.long(),
             "pixel_values": inputs["pixel_values"].squeeze(0),
             "labels": labels.long(),
         }
+
+        # Only add the grid if it exists
+        if grid_thw is not None:
+             # Ensure shape is correct (squeeze is critical if processor wraps it in a batch dimension)
+             output[grid_key] = grid_thw.squeeze(0)
+
+        return output
 
 
 def train(
