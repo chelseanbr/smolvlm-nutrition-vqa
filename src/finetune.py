@@ -547,17 +547,18 @@ def get_ext_benchmark(ckpt_path: str, ckpt_name: str, dataset: str = "val-grader
             print(f"  {display_name + ' ACCURACY (Fuzzy 90)':<25} | {accuracy_fuzzy:.4f}") # <-- NEW Printout
 
     # Print Regression Scores
-    print("\nREGRESSION SCORES (MAE/RMSE/MAPE):") # Updated Header
+    # print("\nREGRESSION SCORES (MAE/RMSE/MAPE):") # Updated Header
+    print("\nREGRESSION SCORES (MAE/RMSE):") # Updated Header
     for label in ALL_LABELS:
         mae = final_metrics.get(f"{label}_mae")
         rmse = final_metrics.get(f"{label}_rmse")
-        # --- ADD MAPE RETRIEVAL ---
-        mape = final_metrics.get(f"{label}_mape")
+        # # --- ADD MAPE RETRIEVAL ---
+        # mape = final_metrics.get(f"{label}_mape")
         
-        # Check for MAE/RMSE/MAPE to be present
-        if mae is not None and mape is not None:
+        # Check for MAE/RMSE to be present
+        if mae is not None and rmse is not None:
             # --- UPDATED PRINT FORMAT ---
-            print(f"  {label.upper():<15} | MAE: {mae:.4f} | RMSE: {rmse:.4f} | MAPE: {mape:.2f}%")
+            print(f"  {label.upper():<15} | MAE: {mae:.4f} | RMSE: {rmse:.4f}")
 
 
 if __name__ == "__main__":
