@@ -13,14 +13,21 @@ class BaseVLM:
     def __init__(self, checkpoint="HuggingFaceTB/SmolVLM-256M-Instruct"):
         self.processor = AutoProcessor.from_pretrained(checkpoint)
 
-        # important to set this to False, otherwise too many image tokens
-        self.processor.image_processor.do_image_splitting = False
+        if checkpoint != 'Qwen/Qwen2.5-VL-3B-Instruct':
+            # important to set this to False, otherwise too many image tokens
+            self.processor.image_processor.do_image_splitting = False
 
-        self.model = AutoModelForVision2Seq.from_pretrained(
-            checkpoint,
-            torch_dtype=torch.bfloat16,
-            _attn_implementation="eager",
-        ).to(DEVICE)
+            self.model = AutoModelForVision2Seq.from_pretrained(
+                checkpoint,
+                torch_dtype=torch.bfloat16,
+                _attn_implementation="eager",
+            ).to(DEVICE)
+        else:
+            self.model = AutoModelForVision2Seq.from_pretrained(
+                checkpoint,
+                # torch_dtype=torch.bfloat16,
+            ).to(DEVICE)
+
         self.device = DEVICE
 
     def format_prompt(self, question: str) -> str:

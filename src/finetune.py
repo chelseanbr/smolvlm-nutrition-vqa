@@ -63,9 +63,36 @@ class VQADatasetForTraining(Dataset):
         self.dataset = dataset
         self.processor = processor
         self.features = ["image", "question", "answer"]
-        self.image_token_id = self.processor.tokenizer.additional_special_tokens_ids[
-            self.processor.tokenizer.additional_special_tokens.index("<image>")
-        ]
+
+        # --- START FIX FOR IMAGE TOKEN LOOKUP ---
+        
+        # Get the checkpoint name being used
+        ckpt_name = processor.pretrained_model_name_or_path.lower()
+        
+        if 'qwen' in ckpt_name:
+            # Qwen-VL models use the specific token: <|image|>
+            image_token_string = "<|image|>"
+        elif 'smolvlm' in ckpt_name:
+            # SmolVLM uses the basic LLaVA token: <image>
+            image_token_string = "<image>"
+        else:
+            # Fallback for unexpected models
+            image_token_string = "<image>"
+
+        # Find the token ID using the dictionary lookup, which is safer than index lookup
+        # We assume the token string is one of the additional special tokens
+        if image_token_string in self.processor.tokenizer.get_vocab():
+             self.image_token_id = self.processor.tokenizer.get_vocab()[image_token_string]
+        elif image_token_string in self.processor.tokenizer.additional_special_tokens:
+             # Look up in the additional special tokens IDs list (your original method)
+             self.image_token_id = self.processor.tokenizer.additional_special_tokens_ids[
+                 self.processor.tokenizer.additional_special_tokens.index(image_token_string)
+             ]
+        else:
+            raise ValueError(f"Image token '{image_token_string}' not found in tokenizer vocabulary for {ckpt_name}. Check model documentation.")
+        
+        # --- END FIX ---
+        
         self.processor.tokenizer.pad_token = self.processor.tokenizer.eos_token
 
     def __len__(self):
