@@ -11,7 +11,7 @@ Accurate nutritional estimation is critical for monitoring diet and alleviating 
 - **Fine-Tuning:** Performed Parameter-Efficient Fine-Tuning (PEFT) and Low-Rank Adaptation (LoRA) for efficient training.
 
 ## Key Results
-The final fine-tuned 2.2B SmolVLM-Instruct model established a strong baseline for using VLMs to predict key nutritional components from real-world images, achieving:
+The final fine-tuned 2.2B SmolVLM-Instruct model established a baseline for using VLMs to predict key nutritional components from real-world images, achieving:
 
 - **Total Classification Accuracy:** 0.587
 
