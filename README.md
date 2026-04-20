@@ -1,4 +1,25 @@
-# csml-final-project
+# VQA for Bioavailable Iron using Small VLMs
+
+## Overview
+Accurate nutritional estimation is critical for monitoring diet and alleviating iron deficiencies. Current systems only estimate total iron rather than bioavailable iron or its individual factors (ingredient portions, cooking methods, and iron-inhibiting micronutrients like calcium). This project explores how Vision-Language Models (VLMs) can bridge this gap.
+
+## Approach
+- **Data:** Created a novel Visual Question Answering (VQA) dataset by supplementing a subset of MM-Food-100K with measurements from the USDA FoodData Central API.
+
+- **Models:** Fine-tuned small Vision-Language Models from the SmolVLM family.
+
+- **Fine-Tuning:** Performed Parameter-Efficient Fine-Tuning (PEFT) and Low-Rank Adaptation (LoRA) for efficient training.
+
+## Key Results
+The final fine-tuned 2.2B SmolVLM-Instruct model established a strong baseline for using VLMs to predict key nutritional components from real-world images, achieving:
+
+- **Total Classification Accuracy:** 0.587
+
+- **Mean Absolute Error (MAE) for Iron:** 1.45 mg
+
+Read the full paper [here](smolvlm-nutrition-vqa.pdf)
+
+
 ## Setup
 
 ```bash
