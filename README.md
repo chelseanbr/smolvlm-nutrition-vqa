@@ -17,6 +17,8 @@ The final fine-tuned 2.2B SmolVLM-Instruct model established a strong baseline f
 
 - **Mean Absolute Error (MAE) for Iron:** 1.45 mg
 
+---
+
 Read the full paper [here](smolvlm-nutrition-vqa-report.pdf)
 
 
@@ -55,8 +57,7 @@ Benchmark:
 python -m src.finetune val vlm_model/SmolVLM-256M-Instruct HuggingFaceTB/SmolVLM-256M-Instruct
 ```
 
-Final Test:
-Benchmark:
+Final Test - Benchmark:
 ```bash
 python -m src.finetune test vlm_model/SmolVLM-256M-Instruct HuggingFaceTB/SmolVLM-256M-Instruct
 ```
