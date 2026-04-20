@@ -17,7 +17,7 @@ The final fine-tuned 2.2B SmolVLM-Instruct model established a strong baseline f
 
 - **Mean Absolute Error (MAE) for Iron:** 1.45 mg
 
-Read the full paper [here](smolvlm-nutrition-vqa.pdf)
+Read the full paper [here](smolvlm-nutrition-vqa-report.pdf)
 
 
 ## Setup
@@ -28,14 +28,6 @@ conda create --name csml-proj python=3.12 pip -y
 conda activate csml-proj
 
 pip install -r requirements.txt
-```
-
-## Data
-```bash
-tar -czvf data.tar.gz data
-```
-```bash
-tar -xzvf data.tar.gz
 ```
 
 ## Finetuning
