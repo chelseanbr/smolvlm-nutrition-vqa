@@ -19,8 +19,7 @@ The final fine-tuned 2.2B SmolVLM-Instruct model established a baseline for usin
 
 ---
 
-Read the full paper [here](smolvlm-nutrition-vqa-report.pdf)
-
+Read the paper (DOI): https://doi.org/10.31224/6975
 
 ## Setup
 
